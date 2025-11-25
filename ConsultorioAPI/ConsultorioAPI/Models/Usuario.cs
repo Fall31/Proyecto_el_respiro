@@ -19,8 +19,6 @@ namespace ConsultorioAPI.Models
 
         public string? PasswordHash { get; set; }
 
-        public string? GoogleSubjectId { get; set; }
-
         [Required]
         public int RolId { get; set; }
         [ForeignKey("RolId")]
