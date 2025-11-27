@@ -1,4 +1,5 @@
 ﻿using System.ComponentModel.DataAnnotations;
+using System.Text.Json.Serialization;
 
 namespace ConsultorioAPI.Models
 {
@@ -11,6 +12,7 @@ namespace ConsultorioAPI.Models
         [MaxLength(50)]
         public string Nombre { get; set; } = string.Empty; 
 
+        [JsonIgnore]
         public ICollection<Usuario>? Usuarios { get; set; }
     }
 }
