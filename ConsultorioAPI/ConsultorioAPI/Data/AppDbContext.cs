@@ -38,11 +38,11 @@ namespace ConsultorioAPI.Data
                 .Property(p => p.Monto)
                 .HasColumnType("decimal(18,2)");
 
-
             modelBuilder.Entity<Turno>()
                 .HasOne(t => t.Pago)
                 .WithOne(p => p.Turno)
-                .HasForeignKey<Pago>(p => p.TurnoId);
+                .HasForeignKey<Turno>(t => t.PagoId)
+                .IsRequired(false);
         }
     }
 }

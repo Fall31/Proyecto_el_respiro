@@ -39,17 +39,25 @@ namespace ConsultorioAPI.Controllers
         {
             if (!ModelState.IsValid) return BadRequest(ModelState);
 
-            // Validate related entities
             var usuario = await _context.Usuarios.FindAsync(dto.UsuarioId);
             if (usuario == null) return BadRequest(new { message = "Usuario inválido." });
 
             var servicio = await _context.Servicios.FindAsync(dto.ServicioId);
             if (servicio == null) return BadRequest(new { message = "Servicio inválido." });
 
+            int? pagoId = null;
             if (dto.PagoId.HasValue)
             {
-                var pago = await _context.Pagos.FindAsync(dto.PagoId.Value);
-                if (pago == null) return BadRequest(new { message = "Pago inválido." });
+                if (dto.PagoId.Value != 0)
+                {
+                    var pago = await _context.Pagos.FindAsync(dto.PagoId.Value);
+                    if (pago == null) return BadRequest(new { message = "Pago inválido." });
+                    pagoId = dto.PagoId.Value;
+                }
+                else
+                {
+                    pagoId = null; 
+                }
             }
 
             var turno = new Turno
@@ -60,7 +68,7 @@ namespace ConsultorioAPI.Controllers
                 Notas = dto.Notas,
                 UsuarioId = dto.UsuarioId,
                 ServicioId = dto.ServicioId,
-                PagoId = dto.PagoId ?? 0
+                PagoId = pagoId
             };
 
             _context.Turnos.Add(turno);
@@ -69,33 +77,49 @@ namespace ConsultorioAPI.Controllers
             return CreatedAtAction(nameof(Get), new { id = turno.Id }, turno);
         }
 
-        [HttpPut("{id}")]
-        public async Task<IActionResult> Update(int id, [FromBody] CreateTurnoDto dto)
+        [HttpPatch("{id}")]
+        public async Task<IActionResult> Patch(int id, [FromBody] PatchTurnoDto dto)
         {
-            if (!ModelState.IsValid) return BadRequest(ModelState);
+            if (dto == null) return BadRequest();
 
             var turno = await _context.Turnos.FindAsync(id);
             if (turno == null) return NotFound();
 
-            var usuario = await _context.Usuarios.FindAsync(dto.UsuarioId);
-            if (usuario == null) return BadRequest(new { message = "Usuario inválido." });
+            TryValidateModel(dto);
+            if (!ModelState.IsValid) return BadRequest(ModelState);
 
-            var servicio = await _context.Servicios.FindAsync(dto.ServicioId);
-            if (servicio == null) return BadRequest(new { message = "Servicio inválido." });
+            if (dto.UsuarioId.HasValue && dto.UsuarioId.Value != turno.UsuarioId)
+            {
+                var usuario = await _context.Usuarios.FindAsync(dto.UsuarioId.Value);
+                if (usuario == null) return BadRequest(new { message = "Usuario inválido." });
+                turno.UsuarioId = dto.UsuarioId.Value;
+            }
+
+            if (dto.ServicioId.HasValue && dto.ServicioId.Value != turno.ServicioId)
+            {
+                var servicio = await _context.Servicios.FindAsync(dto.ServicioId.Value);
+                if (servicio == null) return BadRequest(new { message = "Servicio inválido." });
+                turno.ServicioId = dto.ServicioId.Value;
+            }
 
             if (dto.PagoId.HasValue)
             {
-                var pago = await _context.Pagos.FindAsync(dto.PagoId.Value);
-                if (pago == null) return BadRequest(new { message = "Pago inválido." });
+                if (dto.PagoId.Value != 0)
+                {
+                    var pago = await _context.Pagos.FindAsync(dto.PagoId.Value);
+                    if (pago == null) return BadRequest(new { message = "Pago inválido." });
+                    turno.PagoId = dto.PagoId.Value;
+                }
+                else
+                {
+                    turno.PagoId = null;
+                }
             }
 
-            turno.FechaHoraInicio = dto.FechaHoraInicio;
-            turno.FechaHoraFin = dto.FechaHoraFin;
-            turno.Estado = dto.Estado;
-            turno.Notas = dto.Notas;
-            turno.UsuarioId = dto.UsuarioId;
-            turno.ServicioId = dto.ServicioId;
-            turno.PagoId = dto.PagoId ?? turno.PagoId;
+            if (dto.FechaHoraInicio.HasValue) turno.FechaHoraInicio = dto.FechaHoraInicio.Value;
+            if (dto.FechaHoraFin.HasValue) turno.FechaHoraFin = dto.FechaHoraFin.Value;
+            if (dto.Estado != null) turno.Estado = dto.Estado;
+            if (dto.Notas != null) turno.Notas = dto.Notas;
 
             _context.Turnos.Update(turno);
             await _context.SaveChangesAsync();

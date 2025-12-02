@@ -4,20 +4,20 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using System.Text;
 using System.Text.Json.Serialization;
+using Newtonsoft.Json;
 
 var builder = WebApplication.CreateBuilder(args);
 
 
 builder.Services.AddControllers()
-    .AddJsonOptions(options =>
+    .AddNewtonsoftJson(options =>
     {
-        options.JsonSerializerOptions.ReferenceHandler = ReferenceHandler.IgnoreCycles;
-        options.JsonSerializerOptions.DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull;
+        options.SerializerSettings.ReferenceLoopHandling = ReferenceLoopHandling.Ignore;
+        options.SerializerSettings.NullValueHandling = NullValueHandling.Ignore;
     });
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
-// A. Conexión a Base de Datos (SQL Server)
 var connectionString = builder.Configuration.GetConnectionString("CadenaSQL");
 builder.Services.AddDbContext<AppDbContext>(options =>
     options.UseSqlServer(connectionString));

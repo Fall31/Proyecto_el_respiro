@@ -83,18 +83,21 @@ namespace ConsultorioAPI.Controllers
             return CreatedAtAction(nameof(Get), new { id = s.Id }, resultDto);
         }
 
-        [HttpPut("{id}")]
-        public async Task<IActionResult> Update(int id, [FromBody] UpdateServicioDto dto)
+        [HttpPatch("{id}")]
+        public async Task<IActionResult> Patch(int id, [FromBody] PatchServicioDto dto)
         {
+            if (dto == null) return BadRequest();
+
+            var servicio = await _context.Servicios.FindAsync(id);
+            if (servicio == null) return NotFound();
+
+            TryValidateModel(dto);
             if (!ModelState.IsValid) return BadRequest(ModelState);
 
-            var s = await _context.Servicios.FindAsync(id);
-            if (s == null) return NotFound();
-
-            s.Nombre = dto.Nombre;
-            s.Precio = dto.Precio;
-            s.DuracionMinutos = dto.DuracionMinutos;
-            s.Activo = dto.Activo;
+            if (dto.Nombre != null) servicio.Nombre = dto.Nombre;
+            if (dto.Precio.HasValue) servicio.Precio = dto.Precio.Value;
+            if (dto.DuracionMinutos.HasValue) servicio.DuracionMinutos = dto.DuracionMinutos.Value;
+            if (dto.Activo.HasValue) servicio.Activo = dto.Activo.Value;
 
             await _context.SaveChangesAsync();
             return NoContent();

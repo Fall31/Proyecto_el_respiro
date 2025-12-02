@@ -1,4 +1,5 @@
-﻿using System.ComponentModel.DataAnnotations;
+﻿using System;
+using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 
 namespace ConsultorioAPI.Models
@@ -31,8 +32,7 @@ namespace ConsultorioAPI.Models
         public Servicio? Servicio { get; set; }
 
 
-        [Required]
-        public int PagoId { get; set; }
+        public int? PagoId { get; set; }
         [ForeignKey("PagoId")]
         public Pago? Pago { get; set; }
     }

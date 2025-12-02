@@ -12,13 +12,7 @@ namespace ConsultorioAPI.Data.DTOs
         [MaxLength(50)]
         public string MetodoPago { get; set; } = string.Empty;
 
-        // Opcional: si no se proporciona, el servidor puede asignar DateTime.UtcNow
         public DateTime? FechaPago { get; set; }
-
-        [MaxLength(250)]
-        public string? ComprobanteUrl { get; set; }
-
-        [Required]
-        public int TurnoId { get; set; }
+        public int? TurnoId { get; set; }
     }
 }

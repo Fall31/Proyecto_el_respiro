@@ -1,9 +1,12 @@
 ﻿using ConsultorioAPI.Data;
 using ConsultorioAPI.Models;
+using ConsultorioAPI.Data.DTOs;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using System.Threading.Tasks;
 using System.Collections.Generic;
+using System;
+using System.Linq;
 
 namespace ConsultorioAPI.Controllers
 {
@@ -18,66 +21,74 @@ namespace ConsultorioAPI.Controllers
             _context = context;
         }
 
+        private static PagoDto MapToDto(Pago pago)
+        {
+            return new PagoDto
+            {
+                Id = pago.Id,
+                Monto = pago.Monto,
+                MetodoPago = pago.MetodoPago,
+                FechaPago = pago.FechaPago
+            };
+        }
+
+        private static Pago MapFromCreateDto(CreatePagoDto dto)
+        {
+            return new Pago
+            {
+                Monto = dto.Monto,
+                MetodoPago = dto.MetodoPago,
+                FechaPago = dto.FechaPago ?? DateTime.UtcNow
+            };
+        }
+
         [HttpGet]
-        public async Task<ActionResult<IEnumerable<Pago>>> GetAll()
+        public async Task<ActionResult<IEnumerable<PagoDto>>> GetAll()
         {
             var pagos = await _context.Pagos.AsNoTracking().ToListAsync();
-            return Ok(pagos);
+            var dtos = pagos.Select(MapToDto).ToList();
+            return Ok(dtos);
         }
 
         [HttpGet("{id}")]
-        public async Task<ActionResult<Pago>> Get(int id)
+        public async Task<ActionResult<PagoDto>> Get(int id)
         {
             var pago = await _context.Pagos.FindAsync(id);
             if (pago == null) return NotFound();
-            return pago;
+            return MapToDto(pago);
         }
 
         [HttpPost]
-        public async Task<ActionResult<Pago>> Create([FromBody] Pago pago)
+        public async Task<ActionResult<PagoDto>> Create([FromBody] CreatePagoDto dto)
         {
             if (!ModelState.IsValid) return BadRequest(ModelState);
 
-            // Validate Turno exists
-            var turno = await _context.Turnos.FindAsync(pago.TurnoId);
-            if (turno == null) return BadRequest(new { message = "Turno inválido." });
-
-            // Ensure a pago for this turno does not already exist (one-to-one)
-            var exists = await _context.Pagos.AnyAsync(p => p.TurnoId == pago.TurnoId);
-            if (exists) return BadRequest(new { message = "El turno ya tiene un pago asociado." });
+            var pago = MapFromCreateDto(dto);
+            pago.Id = 0;
 
             _context.Pagos.Add(pago);
             await _context.SaveChangesAsync();
 
-            return CreatedAtAction(nameof(Get), new { id = pago.Id }, pago);
+            var resultDto = MapToDto(pago);
+            return CreatedAtAction(nameof(Get), new { id = pago.Id }, resultDto);
         }
 
-        [HttpPut("{id}")]
-        public async Task<IActionResult> Update(int id, [FromBody] Pago pago)
+        [HttpPatch("{id}")]
+        public async Task<IActionResult> Patch(int id, [FromBody] PatchPagoDto dto)
         {
+            if (dto == null) return BadRequest();
+
+            var pago = await _context.Pagos.FindAsync(id);
+            if (pago == null) return NotFound();
+
+            TryValidateModel(dto);
             if (!ModelState.IsValid) return BadRequest(ModelState);
-            if (id != pago.Id) return BadRequest(new { message = "Id del pago no coincide con la ruta." });
 
-            var existing = await _context.Pagos.FindAsync(id);
-            if (existing == null) return NotFound();
+            if (dto.Monto.HasValue) pago.Monto = dto.Monto.Value;
+            if (dto.MetodoPago != null) pago.MetodoPago = dto.MetodoPago;
+            if (dto.FechaPago.HasValue) pago.FechaPago = dto.FechaPago.Value;
 
-            // If TurnoId changed, validate target turno and uniqueness
-            if (existing.TurnoId != pago.TurnoId)
-            {
-                var turno = await _context.Turnos.FindAsync(pago.TurnoId);
-                if (turno == null) return BadRequest(new { message = "Turno inválido." });
-
-                var exists = await _context.Pagos.AnyAsync(p => p.TurnoId == pago.TurnoId && p.Id != id);
-                if (exists) return BadRequest(new { message = "El turno ya tiene un pago asociado." });
-            }
-
-            existing.Monto = pago.Monto;
-            existing.MetodoPago = pago.MetodoPago;
-            existing.FechaPago = pago.FechaPago;
-            existing.ComprobanteUrl = pago.ComprobanteUrl;
-            existing.TurnoId = pago.TurnoId;
-
-            _context.Pagos.Update(existing);
+            _context.Pagos.Update(pago);
             await _context.SaveChangesAsync();
 
             return NoContent();
@@ -88,6 +99,14 @@ namespace ConsultorioAPI.Controllers
         {
             var pago = await _context.Pagos.FindAsync(id);
             if (pago == null) return NotFound();
+
+            var turno = await _context.Turnos.FirstOrDefaultAsync(t => t.PagoId == id);
+            if (turno != null)
+            {
+                turno.PagoId = null;
+                _context.Turnos.Update(turno);
+                await _context.SaveChangesAsync();
+            }
 
             _context.Pagos.Remove(pago);
             await _context.SaveChangesAsync();

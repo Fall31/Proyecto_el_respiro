@@ -1,4 +1,5 @@
-﻿using System.ComponentModel.DataAnnotations;
+﻿using System;
+using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 
 namespace ConsultorioAPI.Models
@@ -17,11 +18,7 @@ namespace ConsultorioAPI.Models
 
         public DateTime FechaPago { get; set; } = DateTime.UtcNow;
 
-        public string? ComprobanteUrl { get; set; } 
-
-        [Required]
-        public int TurnoId { get; set; }
-        [ForeignKey("TurnoId")]
+        [InverseProperty(nameof(Turno.Pago))]
         public Turno? Turno { get; set; }
     }
 }
