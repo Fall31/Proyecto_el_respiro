@@ -20,15 +20,28 @@ namespace ConsultorioAPI.Controllers
         }
 
         [HttpGet("{id}")]
-        public async Task<ActionResult<Usuario>> GetUsuario(int id)
+        public async Task<ActionResult<UsuarioDto>> GetUsuario(int id)
         {
-            var usuario = await _context.Usuarios.FindAsync(id);
+            var usuario = await _context.Usuarios
+                .Include(u => u.Rol)
+                .FirstOrDefaultAsync(u => u.Id == id);
+
             if (usuario == null) return NotFound();
-            return usuario;
+
+            var dto = new UsuarioDto
+            {
+                Id = usuario.Id,
+                Nombre = usuario.Nombre,
+                Email = usuario.Email,
+                Rol = usuario.Rol?.Nombre ?? string.Empty,
+                FechaRegistro = usuario.FechaRegistro
+            };
+
+            return Ok(dto);
         }
 
         [HttpPost]
-        public async Task<ActionResult<Usuario>> CreateUsuario([FromBody] CreateUsuarioDto dto)
+        public async Task<ActionResult<UsuarioDto>> CreateUsuario([FromBody] CreateUsuarioDto dto)
         {
             if (!ModelState.IsValid) return BadRequest(ModelState);
 
@@ -52,11 +65,20 @@ namespace ConsultorioAPI.Controllers
             _context.Usuarios.Add(usuario);
             await _context.SaveChangesAsync();
 
-            return CreatedAtAction(nameof(GetUsuario), new { id = usuario.Id }, usuario);
+            var resultDto = new UsuarioDto
+            {
+                Id = usuario.Id,
+                Nombre = usuario.Nombre,
+                Email = usuario.Email,
+                Rol = rol?.Nombre ?? string.Empty,
+                FechaRegistro = usuario.FechaRegistro
+            };
+
+            return CreatedAtAction(nameof(GetUsuario), new { id = resultDto.Id }, resultDto);
         }
 
         [HttpPatch("{id}")]
-        public async Task<IActionResult> Patch(int id, [FromBody] PatchUsuarioDto dto)
+        public async Task<ActionResult<UsuarioDto>> Patch(int id, [FromBody] PatchUsuarioDto dto)
         {
             if (dto == null) return BadRequest();
 
@@ -74,7 +96,7 @@ namespace ConsultorioAPI.Controllers
             }
 
             if (dto.Nombre != null) usuario.Nombre = dto.Nombre;
-            if (dto.Password != null) usuario.PasswordHash = dto.Password; // Note: password hashing not implemented here
+            if (dto.Password != null) usuario.PasswordHash = dto.Password; 
             if (dto.RolId.HasValue && dto.RolId.Value != usuario.RolId)
             {
                 var rol = await _context.Roles.FindAsync(dto.RolId.Value);
@@ -85,7 +107,18 @@ namespace ConsultorioAPI.Controllers
             _context.Usuarios.Update(usuario);
             await _context.SaveChangesAsync();
 
-            return NoContent();
+            var rolLoaded = await _context.Roles.FindAsync(usuario.RolId);
+
+            var resultDto = new UsuarioDto
+            {
+                Id = usuario.Id,
+                Nombre = usuario.Nombre,
+                Email = usuario.Email,
+                Rol = rolLoaded?.Nombre ?? string.Empty,
+                FechaRegistro = usuario.FechaRegistro
+            };
+
+            return Ok(resultDto);
         }
 
         [HttpDelete("{id}")]

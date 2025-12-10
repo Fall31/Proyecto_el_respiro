@@ -5,6 +5,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using System.Collections.Generic;
 using System.Threading.Tasks;
+using System.Linq;
 
 namespace ConsultorioAPI.Controllers
 {
@@ -20,18 +21,54 @@ namespace ConsultorioAPI.Controllers
         }
 
         [HttpGet]
-        public async Task<ActionResult<IEnumerable<Turno>>> GetAll()
+        public async Task<ActionResult<IEnumerable<TurnoDto>>> GetAll()
         {
-            var turnos = await _context.Turnos.AsNoTracking().ToListAsync();
-            return Ok(turnos);
+            var turnos = await _context.Turnos
+                .AsNoTracking()
+                .Include(t => t.Usuario).ThenInclude(u => u.Rol)
+                .Include(t => t.Servicio)
+                .Include(t => t.Pago)
+                .ToListAsync();
+
+            var dtos = turnos.Select(t => new TurnoDto
+            {
+                Id = t.Id,
+                FechaHoraInicio = t.FechaHoraInicio,
+                FechaHoraFin = t.FechaHoraFin,
+                Estado = t.Estado,
+                Notas = t.Notas,
+                UsuarioId = t.UsuarioId,
+                ServicioId = t.ServicioId,
+                PagoId = t.PagoId
+            }).ToList();
+
+            return Ok(dtos);
         }
 
         [HttpGet("{id}")]
-        public async Task<ActionResult<Turno>> Get(int id)
+        public async Task<ActionResult<TurnoDto>> Get(int id)
         {
-            var turno = await _context.Turnos.FindAsync(id);
-            if (turno == null) return NotFound();
-            return turno;
+            var t = await _context.Turnos
+                .Include(tu => tu.Usuario).ThenInclude(u => u.Rol)
+                .Include(ts => ts.Servicio)
+                .Include(tp => tp.Pago)
+                .FirstOrDefaultAsync(x => x.Id == id);
+
+            if (t == null) return NotFound();
+
+            var dto = new TurnoDto
+            {
+                Id = t.Id,
+                FechaHoraInicio = t.FechaHoraInicio,
+                FechaHoraFin = t.FechaHoraFin,
+                Estado = t.Estado,
+                Notas = t.Notas,
+                UsuarioId = t.UsuarioId,
+                ServicioId = t.ServicioId,
+                PagoId = t.PagoId,
+            };
+
+            return Ok(dto);
         }
 
         [HttpPost]

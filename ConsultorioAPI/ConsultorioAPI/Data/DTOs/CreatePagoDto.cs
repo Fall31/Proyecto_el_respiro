@@ -13,6 +13,5 @@ namespace ConsultorioAPI.Data.DTOs
         public string MetodoPago { get; set; } = string.Empty;
 
         public DateTime? FechaPago { get; set; }
-        public int? TurnoId { get; set; }
     }
 }

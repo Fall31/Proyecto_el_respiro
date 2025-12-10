@@ -14,6 +14,7 @@ namespace ConsultorioAPI.Data
         public DbSet<Servicio> Servicios { get; set; }
         public DbSet<Turno> Turnos { get; set; }
         public DbSet<Pago> Pagos { get; set; }
+        public DbSet<RefreshToken> RefreshTokens { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -24,12 +25,10 @@ namespace ConsultorioAPI.Data
                 new Rol { Id = 2, Nombre = "Cliente" }
             );
 
-            
             modelBuilder.Entity<Usuario>()
                 .HasIndex(u => u.Email)
                 .IsUnique();
 
-            
             modelBuilder.Entity<Servicio>()
                 .Property(s => s.Precio)
                 .HasColumnType("decimal(18,2)");
@@ -43,6 +42,16 @@ namespace ConsultorioAPI.Data
                 .WithOne(p => p.Turno)
                 .HasForeignKey<Turno>(t => t.PagoId)
                 .IsRequired(false);
+
+            modelBuilder.Entity<RefreshToken>()
+                .HasIndex(r => r.Token)
+                .IsUnique();
+
+            modelBuilder.Entity<RefreshToken>()
+                .HasOne<Usuario>()
+                .WithMany()
+                .HasForeignKey(r => r.UsuarioId)
+                .OnDelete(DeleteBehavior.Cascade);
         }
     }
 }
